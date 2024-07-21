@@ -1,7 +1,7 @@
 import argparse
-
-import soundfile as sf
 import torch
+import soundfile as sf
+import numpy as np
 
 from attack_utils import e2e_attack, emb_attack, fb_attack
 from data_utils import denormalize, file2mel, load_model, mel2wav, normalize
@@ -17,7 +17,7 @@ def main(
     n_iters: int,
     attack_type: str,
 ):
-    assert attack_type == "emb" or vc_src is not None
+    assert attack_type != "e2e" or vc_src is not None
     model, config, attr, device = load_model(model_dir)
 
     vc_tgt = file2mel(vc_tgt, **config["preprocess"])
@@ -28,18 +28,24 @@ def main(
 
     vc_tgt = torch.from_numpy(vc_tgt).T.unsqueeze(0).to(device)
     adv_tgt = torch.from_numpy(adv_tgt).T.unsqueeze(0).to(device)
+    
+    print(vc_tgt.shape)
+    np.save('./mean.npy', attr["mean"])
+    np.save('./std.npy',attr["std"])
+    print(attr["mean"].shape )
+    print(attr["std"].shape)
 
-    if attack_type != "emb":
+    if attack_type == "e2e":
         vc_src = file2mel(vc_src, **config["preprocess"])
         vc_src = normalize(vc_src, attr)
         vc_src = torch.from_numpy(vc_src).T.unsqueeze(0).to(device)
 
-    if attack_type == "e2e":
+    if attack_type == "e2e" :
         adv_inp = e2e_attack(model, vc_src, vc_tgt, adv_tgt, eps, n_iters)
     elif attack_type == "emb":
         adv_inp = emb_attack(model, vc_tgt, adv_tgt, eps, n_iters)
-    elif attack_type == "fb":
-        adv_inp = fb_attack(model, vc_src, vc_tgt, adv_tgt, eps, n_iters)
+    elif attack_type=="fb" :
+        adv_inp = fb_attack(model, vc_tgt, adv_tgt, eps, n_iters)
     else:
         raise NotImplementedError()
 

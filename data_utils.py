@@ -64,7 +64,7 @@ def file2mel(
 
 def mel2wav(
     mel: np.array,
-    sample_rate: int,
+    sample_rate: int,   
     preemph: float,
     n_fft: int,
     hop_length: int,
@@ -112,6 +112,10 @@ def load_model(model_dir: str) -> Tuple[nn.Module, Dict, Dict, str]:
     attr = pickle.load(open(attr_path, "rb"))
     config = yaml.safe_load(open(cfg_path, "r"))
     model = AdaInVC(config["model"]).to(device)
-    model.load_state_dict(torch.load(model_path))
+    
+    if device == "cuda":
+        model.load_state_dict(torch.load(model_path))
+    else:
+        model.load_state_dict(torch.load(model_path, map_location=torch.device('cpu')))
 
     return model, config, attr, device
