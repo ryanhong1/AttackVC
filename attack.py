@@ -16,6 +16,7 @@ def main(
     eps: float,
     n_iters: int,
     attack_type: str,
+    specto: np.ndarray,
 ):
     assert attack_type != "e2e" or vc_src is not None
     model, config, attr, device = load_model(model_dir)
@@ -40,12 +41,13 @@ def main(
         vc_src = normalize(vc_src, attr)
         vc_src = torch.from_numpy(vc_src).T.unsqueeze(0).to(device)
 
-    if attack_type == "e2e" :
+    if attack_type == "e2e":
         adv_inp = e2e_attack(model, vc_src, vc_tgt, adv_tgt, eps, n_iters)
     elif attack_type == "emb":
         adv_inp = emb_attack(model, vc_tgt, adv_tgt, eps, n_iters)
-    elif attack_type=="fb" :
-        adv_inp = fb_attack(model, vc_tgt, adv_tgt, eps, n_iters)
+    elif attack_type == "fb":
+        specto_tensor = torch.tensor(specto)
+        adv_inp = fb_attack(model, vc_tgt, adv_tgt, eps, n_iters, specto=specto_tensor)
     else:
         raise NotImplementedError()
 
@@ -92,5 +94,11 @@ if __name__ == "__main__":
         choices=["e2e", "emb", "fb"],
         default="emb",
         help="The type of adversarial attack to use (end-to-end, embedding, or feedback attack).",
+    )
+    parser.add_argument(
+        "--specto",
+        type=np.ndarray,
+        default=None,
+        help="Path to the spectrogram tensor file (required for feedback attack).",
     )
     main(**vars(parser.parse_args()))

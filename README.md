@@ -59,6 +59,8 @@ Please cite our paper if you find it useful.
 python attack.py --eps 0.1 --n_iters 1500 --attack_type fb ./models p226_001.wav p225_002.wav output_lrp.wav
 python attack.py --eps 0.1 --n_iters 1500 --attack_type emb ./models p226_001.wav p225_002.wav output_og.wav
 librosa를 0.9.1로 해야.
-python inference.py ./models p228_012.wav output.wav output_vc.wav
+python inference.py ./models p228_012.wav output_lrp.wav vc_lrp.wav
 
-python inference.py ./models p228_012.wav p226_001.wav output.vcwithout.wav
+python inference.py ./models p228_012.wav output_og.wav vc_og.wav
+
+python script.py model_dir path_to_vc_tgt path_to_adv_tgt output --attack_type fb --specto path_to_specto_tensor
