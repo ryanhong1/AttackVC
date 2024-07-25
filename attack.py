@@ -16,7 +16,8 @@ def main(
     eps: float,
     n_iters: int,
     attack_type: str,
-    specto: np.ndarray,
+    specto: str,
+    ad: str,
 ):
     assert attack_type != "e2e" or vc_src is not None
     model, config, attr, device = load_model(model_dir)
@@ -29,12 +30,6 @@ def main(
 
     vc_tgt = torch.from_numpy(vc_tgt).T.unsqueeze(0).to(device)
     adv_tgt = torch.from_numpy(adv_tgt).T.unsqueeze(0).to(device)
-    
-    print(vc_tgt.shape)
-    np.save('./mean.npy', attr["mean"])
-    np.save('./std.npy',attr["std"])
-    print(attr["mean"].shape )
-    print(attr["std"].shape)
 
     if attack_type == "e2e":
         vc_src = file2mel(vc_src, **config["preprocess"])
@@ -44,10 +39,11 @@ def main(
     if attack_type == "e2e":
         adv_inp = e2e_attack(model, vc_src, vc_tgt, adv_tgt, eps, n_iters)
     elif attack_type == "emb":
-        adv_inp = emb_attack(model, vc_tgt, adv_tgt, eps, n_iters)
+        adv_inp = emb_attack(model, vc_tgt, adv_tgt, eps, n_iters, ad)
     elif attack_type == "fb":
-        specto_tensor = torch.tensor(specto)
-        adv_inp = fb_attack(model, vc_tgt, adv_tgt, eps, n_iters, specto=specto_tensor)
+        temp = np.load(specto)
+        specto_tensor = torch.tensor(temp)
+        adv_inp = fb_attack(model, vc_tgt, adv_tgt, eps, n_iters, specto=specto_tensor, ad=ad)
     else:
         raise NotImplementedError()
 
@@ -97,8 +93,19 @@ if __name__ == "__main__":
     )
     parser.add_argument(
         "--specto",
-        type=np.ndarray,
+        type=str,
         default=None,
         help="Path to the spectrogram tensor file (required for feedback attack).",
     )
-    main(**vars(parser.parse_args()))
+    parser.add_argument(
+        "--ad",
+        type=str,
+        default=None,
+        help="Additional argument for embedding and feedback attack.",
+    )
+
+    args = parser.parse_args()
+    if args.attack_type in ["emb", "fb"] and args.ad is None:
+        parser.error("--ad is required for emb and fb attack types")
+
+    main(**vars(args))

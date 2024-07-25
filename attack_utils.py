@@ -10,7 +10,7 @@ def e2e_attack(
     vc_tgt: Tensor,
     adv_tgt: Tensor,
     eps: float,
-    n_iters,
+    n_iters: int,
 ) -> Tensor:
     ptb = torch.zeros_like(vc_tgt).normal_(0, 1).requires_grad_(True)
     opt = torch.optim.Adam([ptb])
@@ -31,9 +31,8 @@ def e2e_attack(
 
     return vc_tgt + eps * ptb.tanh()
 
-
 def emb_attack(
-    model: nn.Module, vc_tgt: Tensor, adv_tgt: Tensor, eps: float, n_iters: int
+    model: nn.Module, vc_tgt: Tensor, adv_tgt: Tensor, eps: float, n_iters: int, ad: str
 ) -> Tensor:
     ptb = torch.zeros_like(vc_tgt).normal_(0, 1).requires_grad_(True)
     opt = torch.optim.Adam([ptb])
@@ -52,12 +51,16 @@ def emb_attack(
         loss.backward()
         opt.step()
 
-    return vc_tgt + eps * ptb.tanh()
+    final_perturbation = eps * ptb.tanh()
+    torch.save(final_perturbation, ad)
+    
+    return vc_tgt + final_perturbation
 
 def fb_attack(
-    model: nn.Module, vc_tgt: Tensor, adv_tgt: Tensor, eps: float, n_iters: int, specto: Tensor
+    model: nn.Module, vc_tgt: Tensor, adv_tgt: Tensor, eps: float, n_iters: int, specto: Tensor, ad: str
 ) -> Tensor:
     # Create a mask from specto
+    specto = specto.to('cuda')
     mask = specto.float()  # Convert the binary mask to float tensor
 
     # Initialize the perturbation with requires_grad=True
@@ -74,7 +77,7 @@ def fb_attack(
 
     for _ in pbar:
         # Apply the mask to ensure only elements where mask == 1 are optimized
-        adv_inp = vc_tgt + eps * (ptb * mask)
+        adv_inp = vc_tgt + eps * (ptb * mask).tanh()
         adv_emb = model.speaker_encoder(adv_inp)
         loss = criterion(adv_emb, tgt_emb) - 0.1 * criterion(adv_emb, org_emb)
 
@@ -87,4 +90,7 @@ def fb_attack(
 
         opt.step()
 
-    return vc_tgt + eps * (ptb * mask).tanh()
+    final_perturbation = eps * (ptb * mask).tanh()
+    torch.save(final_perturbation, ad)
+    
+    return vc_tgt + final_perturbation
