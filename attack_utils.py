@@ -59,11 +59,11 @@ def emb_attack(
 def fb_attack(
     model: nn.Module, vc_tgt: Tensor, adv_tgt: Tensor, eps: float, n_iters: int, specto: Tensor, ad: str
 ) -> Tensor:
-    # Create a mask from specto
+    
+    threshold = 0.2
     specto = specto.to('cuda')
-    mask = specto.float()  # Convert the binary mask to float tensor
+    mask = (specto>threshold).float()  
 
-    # Initialize the perturbation with requires_grad=True
     ptb = specto.clone().detach().requires_grad_(True)
 
     # Create an optimizer for the perturbation
