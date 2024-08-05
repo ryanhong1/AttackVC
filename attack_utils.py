@@ -60,13 +60,12 @@ def fb_attack(
     model: nn.Module, vc_tgt: Tensor, adv_tgt: Tensor, eps: float, n_iters: int, specto: Tensor, ad: str
 ) -> Tensor:
     
-    threshold = 0.2
+    threshold = 0.0
     specto = specto.to('cuda')
     mask = (specto>threshold).float()  
 
-    ptb = specto.clone().detach().requires_grad_(True)
+    ptb = mask.clone().detach().requires_grad_(True)
 
-    # Create an optimizer for the perturbation
     opt = torch.optim.Adam([ptb])
     criterion = nn.MSELoss()
     pbar = trange(n_iters)
@@ -76,7 +75,6 @@ def fb_attack(
         tgt_emb = model.speaker_encoder(adv_tgt)
 
     for _ in pbar:
-        # Apply the mask to ensure only elements where mask == 1 are optimized
         adv_inp = vc_tgt + eps * (ptb * mask).tanh()
         adv_emb = model.speaker_encoder(adv_inp)
         loss = criterion(adv_emb, tgt_emb) - 0.1 * criterion(adv_emb, org_emb)
